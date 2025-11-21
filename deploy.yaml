@@ -1,0 +1,26 @@
+# AWS ECS Task Definition
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: a2p-frontend-config
+data:
+  BACKEND_URL: "https://your-backend-api-gateway-url.amazonaws.com/prod"
+---
+# For AWS App Runner
+version: 1.0
+runtime: python3
+build:
+  commands:
+    build:
+      - pip install -r requirements.txt
+run:
+  runtime-version: 3.11
+  command: gunicorn --bind 0.0.0.0:8000 app:app
+  network:
+    port: 8000
+    env: PORT
+  env:
+    - name: PORT
+      value: "8000"
+    - name: BACKEND_URL
+      value: "https://your-backend-api-gateway-url.amazonaws.com/prod"

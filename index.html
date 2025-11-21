@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <title>CloudContactAI A2P 10DLC Compliance Agent</title>
+    <link rel="stylesheet" href="chatgpt-style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">A2P Compliance Agent</div>
+                <button class="new-chat-btn" onclick="startNewChat()">+ New Compliance Check</button>
+            </div>
+            <div class="sidebar-content">
+                <ul class="chat-history" id="chatHistory">
+                    <li class="chat-history-item">Previous Check #1</li>
+                    <li class="chat-history-item">Previous Check #2</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="chat-header">
+                <h1 class="chat-title">🚀 CloudContactAI A2P 10DLC Compliance Agent</h1>
+                <video autoplay muted style="width: 200px; height: 200px; margin-bottom: 10px; object-fit: cover;">
+                    <source src="CloudContactAISquid-Playing.mp4" type="video/mp4">
+                </video>
+                <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
+            </div>
+
+            <div class="messages-container" id="messagesContainer">
+                <div class="message assistant">
+                    <div class="message-avatar"><img src="CCAI-Squid.png" alt="AI" /></div>
+                    <div class="message-content">
+                        Hi! I'm your CloudContactAI A2P 10DLC Compliance Agent. I'll help you check your campaign for compliance issues.
+                        <br><br>
+                        You can:
+                        <br>• Type "start" to begin data collection
+                        <br>• Type "help" for more options
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <textarea 
+                        class="message-input" 
+                        id="messageInput" 
+                        placeholder="Type your message..." 
+                        rows="1"
+                        onkeypress="handleKeyPress(event)"></textarea>
+                    <button class="send-button" onclick="sendMessage()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5001/api'; // Direct to backend, no proxy
+        
+        // Auto-focus textarea on page load
+        window.addEventListener('load', function() {
+            document.getElementById('messageInput').focus();
+        });
+        
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+        }
+        
+        let currentStep = 'initial';
+        let collectedData = {};
+        
+        const steps = [
+            { key: 'brand_name', prompt: 'What is your brand name?' },
+            { key: 'brand_website', prompt: 'What is your brand website URL?' },
+            { key: 'company_ein', prompt: 'What is your company EIN (Employer Identification Number)?' },
+            { key: 'vertical', prompt: 'What is your vertical? (e.g., "Financial Services - Collections")' },
+            { key: 'street_address', prompt: 'What is your company street address?' },
+            { key: 'support_email', prompt: 'What is your support email address?' },
+            { key: 'support_phone', prompt: 'What is your support phone number?' },
+            { key: 'privacy_url', prompt: 'What is your privacy policy URL? (type "done" to skip)' },
+            { key: 'terms_url', prompt: 'What is your terms & conditions URL? (type "done" to skip)' },
+            { key: 'use_case', prompt: 'What is your use case? (e.g., "Debt Servicing / Account Notifications")' },
+            { key: 'sample_messages', prompt: 'Please provide a sample message (type "done" when finished):' }
+        ];
+        
+        let currentStepIndex = 0;
+        let messages = [];
+
+        function addMessage(content, isUser = false) {
+            const messagesDiv = document.getElementById('messagesContainer');
+            if (!messagesDiv) {
+                console.error('Messages container not found');
+                return;
+            }
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.innerHTML = isUser ? 'U' : '<img src="CCAI-Squid.png" alt="AI" />';
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            messageContent.innerHTML = content;
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(messageContent);
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessage(message, true);
+            input.value = '';
+            
+            // Reset cursor to top-left corner and refocus
+            input.setSelectionRange(0, 0);
+            input.scrollTop = 0;
+            input.focus();
+            
+            handleUserMessage(message);
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // Prevent default Enter behavior
+                sendMessage();
+            }
+        }
+
+        async function handleUserMessage(message) {
+            const lowerMessage = message.toLowerCase();
+            
+            if (lowerMessage === 'start') {
+                startDataCollection();
+            } else if (lowerMessage === 'help') {
+                showHelp();
+            } else if (currentStep === 'collecting') {
+                handleDataCollection(message);
+            } else {
+                // Chat with the model for general questions
+                handleGeneralChat(message);
+            }
+        }
+
+        async function handleGeneralChat(message) {
+            try {
+                addMessage("Let me help you with that...", false);
+                
+                const response = await fetch(`${API_BASE}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    addMessage(result.response || "I'm here to help with A2P compliance questions. Type 'start' to begin your submission or 'help' for options.", false);
+                } else {
+                    addMessage("I'm here to help with A2P compliance questions. Type 'start' to begin your submission or 'help' for options.", false);
+                }
+            } catch (error) {
+                addMessage("I'm here to help with A2P compliance questions. Type 'start' to begin your submission or 'help' for options.", false);
+            }
+        }
+
+        function startDataCollection() {
+            currentStep = 'collecting';
+            currentStepIndex = 0;
+            collectedData = { sample_messages: [] };
+            addMessage("Great! Let's collect your A2P submission data. I'll ask you a few questions.");
+            askNextQuestion();
+        }
+
+        function startQuickCheck() {
+            currentStep = 'quick_check';
+            addMessage("Quick compliance check mode. Please provide your data in this format:<br><br>" +
+                      "Brand: Your Brand Name<br>" +
+                      "Website: https://yourwebsite.com<br>" +
+                      "Message: Your sample message here");
+        }
+
+        function showHelp() {
+            addMessage("Available commands:<br>" +
+                      "• <strong>start</strong> - Begin full data collection<br>" +
+                      "• <strong>help</strong> - Show this help message");
+        }
+
+        function askNextQuestion() {
+            if (currentStepIndex < steps.length) {
+                const step = steps[currentStepIndex];
+                addMessage(step.prompt);
+            } else {
+                processCollectedData();
+            }
+        }
+
+        async function handleDataCollection(message) {
+            const step = steps[currentStepIndex];
+            
+            if (step.key === 'sample_messages') {
+                if (message.toLowerCase() === 'done') {
+                    currentStepIndex++;
+                    askNextQuestion();
+                } else {
+                    collectedData.sample_messages.push(message);
+                    addMessage("Message added. Provide another message or type 'done' to continue.");
+                }
+            } else {
+                // Handle optional fields
+                if (message.toLowerCase() === 'skip' || message.toLowerCase() === 'done' || message.trim() === '') {
+                    if (step.key === 'privacy_url' || step.key === 'terms_url') {
+                        collectedData[step.key] = null;
+                        currentStepIndex++;
+                        askNextQuestion();
+                    } else {
+                        addMessage("This field is required. Please provide a value:");
+                    }
+                } else {
+                    collectedData[step.key] = message;
+                    
+                    // Validate critical fields and loop until correct
+                    if (step.key === 'company_ein' || step.key === 'street_address' || step.key === 'support_email' || step.key === 'support_phone' || step.key === 'brand_website') {
+                        const isValid = await validateCurrentData();
+                        if (!isValid) {
+                            // Remove the invalid data and ask again
+                            delete collectedData[step.key];
+                            addMessage(`Please enter a valid ${step.key.replace('_', ' ')}:`);
+                            return; // Don't advance to next step
+                        }
+                    }
+                    
+                    currentStepIndex++;
+                    askNextQuestion();
+                }
+            }
+        }
+
+        async function validateCurrentData() {
+            try {
+                const response = await fetch(`${API_BASE}/validate-data`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(collectedData)
+                });
+                
+                const validation = await response.json();
+                let isValid = true;
+                
+                if (validation.ein_valid === false) {
+                    addMessage("⚠️ EIN should be 9 digits (format: XX-XXXXXXX).");
+                    isValid = false;
+                }
+                
+                if (validation.address_valid === false) {
+                    addMessage("⚠️ Address should include street number, city, state, and ZIP code.");
+                    isValid = false;
+                }
+                
+                if (validation.email_valid === false) {
+                    addMessage("⚠️ Email format appears invalid.");
+                    isValid = false;
+                }
+                
+                if (validation.phone_valid === false) {
+                    addMessage("⚠️ Phone number format appears invalid.");
+                    isValid = false;
+                }
+                
+                return isValid;
+                
+            } catch (error) {
+                console.log("Validation error:", error);
+                return true; // Allow progression if validation service fails
+            }
+        }
+
+        async function handleQuickCheck(message) {
+            try {
+                const lines = message.split('\n');
+                const data = {};
+                
+                lines.forEach(line => {
+                    if (line.toLowerCase().startsWith('brand:')) {
+                        data.brand_name = line.substring(6).trim();
+                    } else if (line.toLowerCase().startsWith('website:')) {
+                        data.brand_website = line.substring(8).trim();
+                    } else if (line.toLowerCase().startsWith('message:')) {
+                        data.sample_messages = [line.substring(8).trim()];
+                    }
+                });
+
+                if (!data.brand_name || !data.brand_website || !data.sample_messages) {
+                    addMessage("Please provide all required fields: Brand, Website, and Message.");
+                    return;
+                }
+
+                addMessage("Please use the full submission form above for complete compliance analysis. Quick checks have been disabled.", false);
+                
+            } catch (error) {
+                addMessage("Please use the full submission form above for analysis.");
+                console.error(error);
+            }
+            
+            currentStep = 'initial';
+        }
+
+        async function processCollectedData() {
+            addMessage("Processing your submission data...", false);
+            
+            try {
+                console.log("Sending data:", collectedData);
+                
+                const response = await fetch(`${API_BASE}/analyze-submission`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(collectedData)
+                });
+
+                console.log("Response status:", response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                console.log("Response data:", result);
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                displayFullResult(result);
+                
+            } catch (error) {
+                console.error("Processing error:", error);
+                addMessage(`Error processing submission: ${error.message}. Please try again.`);
+            }
+            
+            currentStep = 'initial';
+        }
+
+        function displayComplianceResult(result) {
+            let html = `<div class="compliance-result">
+                <h3>📊 Compliance Analysis</h3>
+                <p><strong>Status:</strong> ${result.status.toUpperCase()}</p>
+                <p><strong>Score:</strong> ${result.score}/100</p>
+                <p><strong>Confidence:</strong> ${result.confidence_score}</p>
+            </div>`;
+
+            if (result.violations && result.violations.length > 0) {
+                html += '<h4>❌ Violations:</h4>';
+                result.violations.forEach(violation => {
+                    html += `<div class="violation">${violation}</div>`;
+                });
+            }
+
+            if (result.recommendations && result.recommendations.length > 0) {
+                html += '<h4>💡 Recommendations:</h4>';
+                result.recommendations.forEach(rec => {
+                    html += `<div class="recommendation">${rec}</div>`;
+                });
+            }
+
+            addMessage(html);
+        }
+
+        function displayFullResult(result) {
+            const compliance = result.compliance_result;
+            const recommendation = result.recommendation;
+            const analysis = result.submission_package.compliance_analysis;
+            
+            // Determine background color based on recommendation action and score
+            let bgColor = '#f0f0f0'; // default gray
+            if (recommendation.action === 'PROCEED_WITH_SUBMISSION' || compliance.score >= 99) {
+                bgColor = '#d4edda'; // green background for good scores
+            } else if (recommendation.action === 'DO_NOT_SUBMIT' || compliance.score < 90) {
+                bgColor = '#f8d7da'; // red background for poor scores
+            } else {
+                bgColor = '#fff3cd'; // yellow background for moderate scores
+            }
+            
+            let html = `<div class="compliance-result" style="background-color: ${bgColor}; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                <h3>🎯 Final Recommendation: ${recommendation.action}</h3>
+                <p>${recommendation.message}</p>
+                <br>
+                <p><strong>Status:</strong> ${compliance.status.toUpperCase()}</p>
+                <p><strong>Score:</strong> ${compliance.score}/100</p>
+                <p><strong>Confidence:</strong> ${recommendation.confidence}</p>
+            </div>`;
+
+            if (compliance.violations && compliance.violations.length > 0) {
+                html += '<h4>❌ Issues Found:</h4>';
+                compliance.violations.forEach(violation => {
+                    html += `<div class="violation">${violation}</div>`;
+                });
+            }
+
+            // Show website violation locations
+            if (analysis && analysis.violation_locations && analysis.violation_locations.length > 0) {
+                html += '<h4>📍 Violation Locations:</h4>';
+                analysis.violation_locations.forEach(location => {
+                    const section = location.section || 'Main Content';
+                    const description = location.description || location.violation || 'Compliance issue detected';
+                    
+                    html += `<div class="violation">
+                        <strong>${description}</strong><br>
+                        📄 Page: ${location.page_title || 'Website'}<br>
+                        📍 Section: "${section}"<br>`;
+                    
+                    // Handle different violation types
+                    if (location.violation_type === 'debt_marketing_proximity') {
+                        // Show both debt and marketing matches
+                        const debtMatch = location.debt_match;
+                        const marketingMatch = location.marketing_match;
+                        
+                        if (debtMatch && marketingMatch) {
+                            html += `🔍 Debt term found: <strong>"${debtMatch.matched_text}"</strong><br>`;
+                            html += `📝 Context: ${debtMatch.context}<br>`;
+                            html += `🔍 Marketing term found: <strong>"${marketingMatch.matched_text}"</strong><br>`;
+                            html += `📝 Context: ${marketingMatch.context}<br>`;
+                        }
+                    } else {
+                        // Handle regular violations
+                        const matchedText = location.matched_text || '';
+                        const context = location.context || '';
+                        
+                        if (matchedText && context) {
+                            // Bold the matched text in the context
+                            const boldContext = context.replace(matchedText, `<strong>${matchedText}</strong>`);
+                            html += `🔍 Found: ${boldContext}<br>`;
+                        } else if (matchedText) {
+                            html += `🔍 Matched Text: <strong>${matchedText}</strong><br>`;
+                        }
+                    }
+                    
+                    html += `🔗 URL: ${location.url}
+                    </div>`;
+                });
+            }
+
+            // Show address verification status
+            if (analysis && analysis.address_verified === false) {
+                html += '<h4>📍 Address Verification:</h4>';
+                html += `<div class="violation">
+                    ⚠️ Company address not found on website or policy pages<br>
+                    Address must appear on website, privacy policy, or terms & conditions
+                </div>`;
+            } else if (analysis && analysis.address_verified === true) {
+                html += '<h4>📍 Address Verification:</h4>';
+                html += `<div class="compliance-result">
+                    ✅ Company address verified on website or policy pages
+                </div>`;
+            }
+
+            if (compliance.recommendations && compliance.recommendations.length > 0) {
+                html += '<h4>💡 Action Items:</h4>';
+                compliance.recommendations.forEach(rec => {
+                    html += `<div class="recommendation">${rec}</div>`;
+                });
+            }
+
+            // Show business verification results
+            if (compliance.business_verification) {
+                const verification = compliance.business_verification;
+                html += '<h4>🏛️ Regulatory Database Check:</h4>';
+                
+                if (verification.verification_status === 'completed') {
+                    if (verification.issues_found) {
+                        const riskColor = verification.risk_level === 'high' ? '#f8d7da' : 
+                                        verification.risk_level === 'medium' ? '#fff3cd' : '#d1ecf1';
+                        
+                        html += `<div class="violation" style="background-color: ${riskColor}; padding: 10px; border-radius: 5px;">
+                            <strong>⚠️ Regulatory Issues Found - Risk Level: ${verification.risk_level?.toUpperCase()}</strong><br>
+                            <em>Sources: CFPB, FCC, FTC databases</em><br><br>`;
+                        
+                        if (verification.issues && verification.issues.length > 0) {
+                            verification.issues.forEach((issue, index) => {
+                                html += `${index + 1}. ${issue}<br>`;
+                            });
+                        }
+                        
+                        if (verification.recommendations && verification.recommendations.length > 0) {
+                            html += '<br><strong>Recommendations:</strong><br>';
+                            verification.recommendations.forEach(rec => {
+                                html += `• ${rec}<br>`;
+                            });
+                        }
+                        
+                        html += '</div>';
+                    } else {
+                        html += '<div class="compliance-result">✅ No regulatory issues found in CFPB, FCC, or FTC databases</div>';
+                    }
+                } else {
+                    html += `<div class="recommendation">ℹ️ ${verification.message || 'Regulatory verification not available'}</div>`;
+                }
+            }
+
+            addMessage(html);
+        }
+
+        // Initialize event listeners when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            const textarea = document.getElementById('messageInput');
+            textarea.addEventListener('input', function() {
+                autoResize(this);
+            });
+        });
+    </script>
+</body>
+</html>
