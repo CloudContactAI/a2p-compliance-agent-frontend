@@ -3,7 +3,8 @@ frontend:
   phases:
     build:
       commands:
-        - echo "Static site - no build needed"
+        - echo "Injecting environment variables..."
+        - sed -i "s|\${API_URL}|$API_URL|g" env-config.js
   artifacts:
     baseDirectory: /
     files:
