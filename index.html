@@ -153,6 +153,8 @@
                 showDeveloperHelp();
             } else if (currentStep === 'collecting') {
                 handleDataCollection(message);
+            } else if (currentStep === 'developer_help') {
+                handleDeveloperQuestion(message);
             } else {
                 // Chat with the model for general questions
                 handleGeneralChat(message);
@@ -197,6 +199,7 @@
         }
 
         function showDeveloperHelp() {
+            currentStep = 'developer_help';
             addMessage("I can help you with CloudContactAI developer documentation. What would you like to know about?<br><br>" +
                       "You can ask me questions about:<br>" +
                       "• API integration<br>" +
@@ -205,6 +208,27 @@
                       "• SDKs and libraries<br>" +
                       "• Or anything from developer.cloudcontactai.com<br><br>" +
                       "Just ask your question!");
+        }
+        
+        async function handleDeveloperQuestion(question) {
+            try {
+                addMessage("Let me search the documentation...", false);
+                
+                const response = await fetch(`${API_BASE}/developer-help`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: question })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    addMessage(result.answer, false);
+                } else {
+                    addMessage("I'm having trouble accessing the documentation. Please visit https://developer.cloudcontactai.com directly.", false);
+                }
+            } catch (error) {
+                addMessage("I'm having trouble accessing the documentation. Please visit https://developer.cloudcontactai.com directly.", false);
+            }
         }
 
         function askNextQuestion() {
