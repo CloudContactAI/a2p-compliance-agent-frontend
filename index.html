@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <title>CloudContactAI A2P 10DLC Compliance Agent</title>
+    <title>CloudContactAI Agent</title>
     <script src="env-config.js"></script>
     <link rel="stylesheet" href="chatgpt-style.css">
 </head>
@@ -13,8 +13,8 @@
         <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-header">
-                <div class="sidebar-title">A2P Compliance Agent</div>
-                <button class="new-chat-btn" onclick="startNewChat()">+ New Compliance Check</button>
+                <div class="sidebar-title">CloudContactAI Agent</div>
+                <button class="new-chat-btn" onclick="startNewChat()">+ New Chat</button>
             </div>
             <div class="sidebar-content">
                 <ul class="chat-history" id="chatHistory">
@@ -27,7 +27,7 @@
         <!-- Main Content -->
         <div class="main-content">
             <div class="chat-header">
-                <h1 class="chat-title">🚀 CloudContactAI A2P 10DLC Compliance Agent</h1>
+                <h1 class="chat-title">🚀 CloudContactAI Agent</h1>
                 <video autoplay muted style="width: 200px; height: 200px; margin-bottom: 10px; object-fit: cover;">
                     <source src="CloudContactAISquid-Playing.mp4" type="video/mp4">
                 </video>
@@ -38,11 +38,11 @@
                 <div class="message assistant">
                     <div class="message-avatar"><img src="CCAI-Squid.png" alt="AI" /></div>
                     <div class="message-content">
-                        Hi! I'm your CloudContactAI A2P 10DLC Compliance Agent. I'll help you check your campaign for compliance issues.
+                        Hi! I'm your CloudContactAI Agent. How can I help you today?
                         <br><br>
-                        You can:
-                        <br>• Type "start" to begin data collection
-                        <br>• Type "help" for more options
+                        Available commands:
+                        <br>• Type "a2p" to start A2P 10DLC compliance check
+                        <br>• Type "help" for developer documentation assistance
                     </div>
                 </div>
             </div>
@@ -147,10 +147,10 @@
         async function handleUserMessage(message) {
             const lowerMessage = message.toLowerCase();
             
-            if (lowerMessage === 'start') {
+            if (lowerMessage === 'a2p') {
                 startDataCollection();
             } else if (lowerMessage === 'help') {
-                showHelp();
+                showDeveloperHelp();
             } else if (currentStep === 'collecting') {
                 handleDataCollection(message);
             } else {
@@ -196,10 +196,15 @@
                       "Message: Your sample message here");
         }
 
-        function showHelp() {
-            addMessage("Available commands:<br>" +
-                      "• <strong>start</strong> - Begin full data collection<br>" +
-                      "• <strong>help</strong> - Show this help message");
+        function showDeveloperHelp() {
+            addMessage("I can help you with CloudContactAI developer documentation. What would you like to know about?<br><br>" +
+                      "You can ask me questions about:<br>" +
+                      "• API integration<br>" +
+                      "• Authentication<br>" +
+                      "• Webhooks<br>" +
+                      "• SDKs and libraries<br>" +
+                      "• Or anything from developer.cloudcontactai.com<br><br>" +
+                      "Just ask your question!");
         }
 
         function askNextQuestion() {
