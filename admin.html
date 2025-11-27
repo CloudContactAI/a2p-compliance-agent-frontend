@@ -54,7 +54,7 @@
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:5001';
+        const API_BASE = window.ENV?.API_URL?.replace('/api', '') || 'http://localhost:5001';
         let allSubmissions = [];
 
         async function login() {
