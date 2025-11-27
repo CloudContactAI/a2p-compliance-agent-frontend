@@ -5,6 +5,7 @@ frontend:
       commands:
         - echo "Injecting environment variables..."
         - sed -i "s|\${API_URL}|$API_URL|g" env-config.js
+        - echo "Widget ready at /widget.js"
   artifacts:
     baseDirectory: /
     files:
