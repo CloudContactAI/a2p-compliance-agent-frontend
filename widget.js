@@ -8,7 +8,7 @@
       
       const iframe = document.createElement('iframe');
       iframe.id = 'ccai-a2p-widget-iframe';
-      iframe.src = 'https://agent.cloudcontactai.com';
+      iframe.src = 'https://main.d28k46xdno1z6x.amplifyapp.com';
       iframe.style.cssText = 'position:fixed;bottom:90px;right:20px;width:400px;height:600px;border:none;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.2);z-index:9999;display:none;';
       
       button.onclick = function() {
