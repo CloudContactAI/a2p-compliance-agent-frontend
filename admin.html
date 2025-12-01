@@ -64,7 +64,7 @@
             const errorDiv = document.getElementById('loginError');
 
             try {
-                const response = await fetch(`${API_BASE}/api/admin/login`, {
+                const response = await fetch(`${API_BASE}/admin/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
@@ -89,7 +89,7 @@
 
         async function loadSubmissions() {
             try {
-                const response = await fetch(`${API_BASE}/api/admin/submissions`, {
+                const response = await fetch(`${API_BASE}/admin/submissions`, {
                     credentials: 'include'
                 });
 
@@ -232,7 +232,7 @@
 
         async function logout() {
             try {
-                await fetch(`${API_BASE}/api/admin/logout`, {
+                await fetch(`${API_BASE}/admin/logout`, {
                     method: 'POST',
                     credentials: 'include'
                 });
