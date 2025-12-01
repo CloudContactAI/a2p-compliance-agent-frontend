@@ -22,17 +22,31 @@ def static_files(filename):
     """Serve static files like CSS"""
     return send_from_directory('.', filename)
 
-@app.route('/api/<path:endpoint>', methods=['POST'])
+@app.route('/api/<path:endpoint>', methods=['POST', 'GET'])
 def proxy_api(endpoint):
     """Proxy API calls to backend"""
     try:
-        response = requests.post(
-            f"{BACKEND_URL}/{endpoint}",
-            json=request.get_json(),
-            headers={'Content-Type': 'application/json'},
-            timeout=5
-        )
-        return jsonify(response.json()), response.status_code
+        if request.method == 'POST':
+            response = requests.post(
+                f"{BACKEND_URL}/{endpoint}",
+                json=request.get_json(),
+                headers={'Content-Type': 'application/json'},
+                cookies=request.cookies,
+                timeout=5
+            )
+        else:
+            response = requests.get(
+                f"{BACKEND_URL}/{endpoint}",
+                cookies=request.cookies,
+                timeout=5
+            )
+        
+        # Forward response with cookies
+        flask_response = jsonify(response.json())
+        flask_response.status_code = response.status_code
+        for key, value in response.cookies.items():
+            flask_response.set_cookie(key, value)
+        return flask_response
     except Exception as e:
         return jsonify({"error": "Backend compliance service is not running. Please start the backend API."}), 500
 
