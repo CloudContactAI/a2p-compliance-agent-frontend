@@ -53,8 +53,10 @@
         </div>
     </div>
 
+    <script src="env-config.js"></script>
     <script>
         let allSubmissions = [];
+        const API_BASE = window.ENV?.API_URL || '';
 
         async function login() {
             const username = document.getElementById('username').value;
@@ -62,7 +64,7 @@
             const errorDiv = document.getElementById('loginError');
 
             try {
-                const response = await fetch('/api/admin/login', {
+                const response = await fetch(`${API_BASE}/api/admin/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
@@ -87,7 +89,7 @@
 
         async function loadSubmissions() {
             try {
-                const response = await fetch('/api/admin/submissions', {
+                const response = await fetch(`${API_BASE}/api/admin/submissions`, {
                     credentials: 'include'
                 });
 
@@ -230,7 +232,7 @@
 
         async function logout() {
             try {
-                await fetch('/api/admin/logout', {
+                await fetch(`${API_BASE}/api/admin/logout`, {
                     method: 'POST',
                     credentials: 'include'
                 });
