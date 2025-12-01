@@ -1,3 +1,3 @@
 window.ENV = {
-  API_URL: '${API_URL}'
+  API_URL: 'https://agent-api.cloudcontactai.com'
 };
