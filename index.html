@@ -83,7 +83,7 @@
 
     <script>
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const API_BASE = isLocal ? 'http://localhost:5001/api' : 'https://agent-api.cloudcontactai.com/api';
+        const API_BASE = isLocal ? 'http://localhost:5001' : 'https://agent-api.cloudcontactai.com';
         
         // Auto-focus textarea on page load
         window.addEventListener('load', function() {
