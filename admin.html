@@ -53,10 +53,10 @@
         </div>
     </div>
 
-    <script src="env-config.js"></script>
     <script>
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const ADMIN_BASE = isLocal ? 'http://localhost:5001' : 'https://agent-api.cloudcontactai.com';
         let allSubmissions = [];
-        const ADMIN_BASE = window.ENV?.ADMIN_URL || '';
 
         async function login() {
             const username = document.getElementById('username').value;

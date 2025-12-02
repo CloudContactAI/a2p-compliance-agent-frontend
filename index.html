@@ -25,7 +25,6 @@
     <meta property="twitter:description" content="AI-powered agent for A2P 10DLC compliance checking and CloudContactAI developer documentation support.">
     <meta property="twitter:image" content="https://agent.cloudcontactai.com/CCAI-Squid.png">
     
-    <script src="env-config.js"></script>
     <link rel="stylesheet" href="chatgpt-style.css">
 </head>
 <body>
@@ -83,7 +82,8 @@
     </div>
 
     <script>
-        const API_BASE = window.ENV?.API_URL || 'http://localhost:8000/api'; // Default to localhost for development
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const API_BASE = isLocal ? 'http://localhost:5001/api' : 'https://agent-api.cloudcontactai.com/api';
         
         // Auto-focus textarea on page load
         window.addEventListener('load', function() {
