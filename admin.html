@@ -57,6 +57,7 @@
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         const ADMIN_BASE = isLocal ? 'http://localhost:5001' : 'https://agent-api.cloudcontactai.com';
         let allSubmissions = [];
+        let authToken = null;
 
         async function login() {
             const username = document.getElementById('username').value;
@@ -67,13 +68,13 @@
                 const response = await fetch(`${ADMIN_BASE}/admin/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
                     body: JSON.stringify({ username, password })
                 });
 
                 const result = await response.json();
 
                 if (result.success) {
+                    authToken = result.token;
                     document.getElementById('loginForm').style.display = 'none';
                     document.getElementById('dashboard').style.display = 'block';
                     loadSubmissions();
@@ -90,7 +91,7 @@
         async function loadSubmissions() {
             try {
                 const response = await fetch(`${ADMIN_BASE}/admin/submissions`, {
-                    credentials: 'include'
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
 
                 if (response.status === 401) {
@@ -108,6 +109,13 @@
         }
 
         function displaySubmissions(submissions) {
+            // Sort by timestamp descending (newest first)
+            submissions.sort((a, b) => {
+                const dateA = new Date(a.timestamp || 0);
+                const dateB = new Date(b.timestamp || 0);
+                return dateB - dateA;
+            });
+            
             let html = `
                 <table>
                     <tr>
@@ -122,9 +130,6 @@
             `;
 
             submissions.forEach(submission => {
-                const submissionData = submission.submission_data || {};
-                const complianceResult = submission.compliance_result || {};
-                
                 // Format timestamp
                 let formattedTimestamp = submission.timestamp || '';
                 if (formattedTimestamp) {
@@ -149,10 +154,21 @@
                         <td>${submission.submission_id || ''}</td>
                         <td>${submission.session_id || ''}</td>
                         <td>${formattedTimestamp}</td>
-                        <td>${submissionData.brand_name || ''}</td>
-                        <td>${complianceResult.status || ''}</td>
-                        <td>${complianceResult.score || ''}</td>
-                        <td><button onclick="viewDetails('${submission.submission_id}')">View</button></td>
+                        <td>${submission.brand_name || ''}</td>
+                        <td>${submission.compliance_status || ''}</td>
+                        <td>${submission.compliance_score || ''}</td>
+                        <td>
+                            <button onclick="viewDetails('${submission.submission_id}')">View</button>
+                            ${submission.generated_site_url ? 
+                                `<button disabled style="background-color: #ccc; color: #666; cursor: not-allowed;">Generate</button>` :
+                                `<button onclick="generateCleanSite('${submission.submission_id}')" style="background-color: #28a745; color: white;">Generate</button>`
+                            }
+                            ${submission.generated_site_url ? 
+                                `<button onclick="window.open('${submission.generated_site_url}', '_blank')" style="background-color: #007bff; color: white;">View Site</button>` : 
+                                `<button disabled style="background-color: #ccc; color: #666; cursor: not-allowed;">View Site</button>`
+                            }
+                            <button onclick="confirmDelete('${submission.submission_id}')" style="background-color: #dc3545; color: white;">Delete</button>
+                        </td>
                     </tr>
                 `;
             });
@@ -200,7 +216,23 @@
                 if (typeof displayValue === 'object' && displayValue !== null && !Array.isArray(displayValue)) {
                     html += `<td style="border: 1px solid #ddd; padding: 8px;">${formatAsTable(displayValue)}</td>`;
                 } else if (Array.isArray(displayValue)) {
-                    html += `<td style="border: 1px solid #ddd; padding: 8px;">${displayValue.join('<br>')}</td>`;
+                    // Handle arrays - check if items are objects or primitives
+                    if (displayValue.length > 0 && typeof displayValue[0] === 'object') {
+                        // Array of objects - format each one
+                        let arrayHtml = '<ul style="margin: 0; padding-left: 20px;">';
+                        displayValue.forEach(item => {
+                            if (typeof item === 'object') {
+                                arrayHtml += `<li>${formatAsTable(item)}</li>`;
+                            } else {
+                                arrayHtml += `<li>${item}</li>`;
+                            }
+                        });
+                        arrayHtml += '</ul>';
+                        html += `<td style="border: 1px solid #ddd; padding: 8px;">${arrayHtml}</td>`;
+                    } else {
+                        // Array of primitives
+                        html += `<td style="border: 1px solid #ddd; padding: 8px;">${displayValue.join('<br>')}</td>`;
+                    }
                 } else if (typeof displayValue === 'string' && (displayValue.startsWith('{') || displayValue.startsWith('['))) {
                     try {
                         const parsed = JSON.parse(displayValue);
@@ -220,6 +252,87 @@
 
         function closeModal() {
             document.getElementById('jsonModal').style.display = 'none';
+        }
+
+        function confirmDelete(submissionId) {
+            if (confirm('Are you sure you want to delete this submission? This action cannot be undone.')) {
+                deleteSubmission(submissionId);
+            }
+        }
+
+        async function deleteSubmission(submissionId) {
+            try {
+                const response = await fetch(`${ADMIN_BASE}/admin/submissions/${submissionId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (response.ok) {
+                    alert('Submission deleted successfully');
+                    loadSubmissions(); // Reload the table
+                } else {
+                    const result = await response.json();
+                    alert(`Failed to delete: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                alert(`Error deleting submission: ${error.message}`);
+            }
+        }
+
+        async function generateCleanSite(submissionId) {
+            if (!confirm('Generate cleaned website without debt-related content?')) {
+                return;
+            }
+
+            // Show progress indicator
+            const progressDiv = document.createElement('div');
+            progressDiv.id = 'progress-indicator';
+            progressDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border: 2px solid #28a745; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 10000; text-align: center;';
+            progressDiv.innerHTML = `
+                <h3 style="margin: 0 0 15px 0;">Generating Clean Site...</h3>
+                <div style="font-size: 14px; color: #666;">
+                    <p>⬇️ Downloading pages and assets...</p>
+                    <p>🧹 Removing debt-related content...</p>
+                    <p>☁️ Uploading to S3...</p>
+                </div>
+                <div style="margin-top: 15px;">
+                    <div style="width: 200px; height: 4px; background: #e0e0e0; border-radius: 2px; overflow: hidden;">
+                        <div style="width: 100%; height: 100%; background: #28a745; animation: progress 2s ease-in-out infinite;"></div>
+                    </div>
+                </div>
+                <style>
+                    @keyframes progress {
+                        0% { transform: translateX(-100%); }
+                        100% { transform: translateX(100%); }
+                    }
+                </style>
+            `;
+            document.body.appendChild(progressDiv);
+
+            try {
+                const response = await fetch(`${ADMIN_BASE}/admin/generate-clean-site/${submissionId}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const result = await response.json();
+                
+                // Remove progress indicator
+                document.body.removeChild(progressDiv);
+                
+                if (response.ok) {
+                    alert(`Clean site generated successfully!\n\nURL: ${result.url}`);
+                    loadSubmissions(); // Reload to show View Site button
+                } else {
+                    alert(`Failed to generate: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                // Remove progress indicator
+                if (document.getElementById('progress-indicator')) {
+                    document.body.removeChild(progressDiv);
+                }
+                alert(`Error generating clean site: ${error.message}`);
+            }
         }
 
         // Close modal when clicking outside of it

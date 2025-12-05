@@ -430,7 +430,7 @@
         function displayFullResult(result) {
             const compliance = result.compliance_result;
             const recommendation = result.recommendation;
-            const analysis = result.submission_package.compliance_analysis;
+            const analysis = compliance.compliance_analysis || result.submission_package?.compliance_analysis;
             
             // Determine background color based on recommendation action and score
             let bgColor = '#f0f0f0'; // default gray
@@ -450,6 +450,16 @@
                 <p><strong>Score:</strong> ${compliance.score}/100</p>
                 <p><strong>Confidence:</strong> ${recommendation.confidence}</p>
             </div>`;
+
+            // Show match statistics
+            if (analysis) {
+                html += '<div style="background: #f0f0f0; padding: 10px; border-radius: 5px; margin: 10px 0;">';
+                html += '<h4>📊 Content Analysis:</h4>';
+                html += `<p>🔍 Debt-related terms found: <strong>${analysis.debt_matches_found || 0}</strong></p>`;
+                html += `<p>📢 Marketing terms found near debt content: <strong>${analysis.marketing_matches_found || 0}</strong></p>`;
+                html += `<p>⚠️ Total violations: <strong>${analysis.total_violations || 0}</strong></p>`;
+                html += '</div>';
+            }
 
             if (compliance.violations && compliance.violations.length > 0) {
                 html += '<h4>❌ Issues Found:</h4>';
